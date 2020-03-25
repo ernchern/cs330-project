@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// List of threads that are sleeping because of timer
+static struct list sleeping_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -148,6 +151,8 @@ thread_tick (void) {
 #endif
 	else
 		kernel_ticks++;
+
+	check_thread_sleep();
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
@@ -409,6 +414,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	t->n_tick_awake = 0;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -587,4 +593,32 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+// Go through all the threads that are sleeping and unblock if needed
+void check_thread_sleep() {
+	struct list_elem *e;
+
+	ASSERT(intr_get_level() == INTR_OFF);
+
+	for (e = list_begin(&sleeping_list); e != list_end(&sleeping_list); e = list_next(e)) {
+		struct thread *t = list_entry(e, struct thread, elem);
+
+		if (t->status == THREAD_BLOCKED && t->n_tick_awake > 0) {
+			t->n_tick_awake--;
+			if (t->n_tick_awake == 0) { // if it has passed n_tick_awake ticks, unblock thread
+				thread_unblock(t);
+				list_remove(&t->elem);
+			} 
+		}
+	}
+
+}
+
+void sleep_thread(struct thread *t) {
+	ASSERT(intr_get_level() == INTR_OFF);
+	ASSERT (is_thread (t));
+	ASSERT (t->status == THREAD_RUNNING);
+
+	list_push_back(&sleeping_list, &t->elem);
 }

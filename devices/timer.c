@@ -90,11 +90,18 @@ timer_elapsed (int64_t then) {
 /* Suspends execution for approximately TICKS timer ticks. */
 void
 timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+	//int64_t start = timer_ticks();
 
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	enum intr_level old_int = intr_disable();
+	struct thread *current_t = thread_current();
+	current_t->n_tick_awake = ticks; //set how many ticks it will be sleeping for
+	sleep_thread(current_t);
+	thread_block(); // block the thread so other threads can run
+	intr_set_level(old_int);
+
+	// ASSERT (intr_get_level () == INTR_ON);
+	// while (timer_elapsed (start) < ticks)
+	// 	thread_yield ();
 }
 
 /* Suspends execution for approximately MS milliseconds. */
