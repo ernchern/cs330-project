@@ -100,7 +100,10 @@ struct thread {
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 
-	int n_tick_awake;
+	int n_tick_awake; // how many ticks left before waking up
+
+	int priority_original; // initial priority, never changes on donation
+	bool priority_donated; //true if it has received an new donated priority
 };
 
 /* If false (default), use round-robin scheduler.
@@ -138,6 +141,13 @@ int thread_get_load_avg (void);
 void do_iret (struct intr_frame *tf);
 
 void check_thread_sleep(void);
-void sleep_thread(struct thread *t);
+void sleep_thread(struct thread *);
+
+bool comparator_less_priority(struct list_elem *, struct list_elem *, void *);
+bool comparator_greater_priority(struct list_elem *, struct list_elem *, void *);
+
+void donate_priority(void);
+
+//void print_ready_list(void);
 
 #endif /* threads/thread.h */

@@ -32,6 +32,11 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+struct list list_locks;
+
+// list of locks, since there might be more than one
+//static list list_locks;
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -109,11 +114,20 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters))
-		thread_unblock (list_entry (list_pop_front (&sema->waiters),
-					struct thread, elem));
+
+	struct thread *t = NULL;
+
+	if (!list_empty (&sema->waiters)) {
+		t = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+		thread_unblock(t);
+	}
 	sema->value++;
 	intr_set_level (old_level);
+
+	// changed: if the one awake has higher priority, yield
+	if (t!= NULL && thread_current()->priority < t->priority) {
+		thread_yield();
+	}
 }
 
 static void sema_test_helper (void *sema_);
@@ -171,6 +185,7 @@ lock_init (struct lock *lock) {
 	ASSERT (lock != NULL);
 
 	lock->holder = NULL;
+	lock->id = (int) lock; // let's use the address of the pointer as an id since it is unique
 	sema_init (&lock->semaphore, 1);
 }
 
@@ -188,8 +203,34 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	struct thread *max_t;
+
+	// if the lock is not yet in the list, add it
+	if (!lock_exists(lock)) {
+		list_push_back(&list_locks, &lock->elem);
+	}
+
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
+}
+
+// returns true if lock exists in the list of locks
+bool lock_exists (struct lock *curr_lock) {
+	struct list_elem *e;
+	struct lock *lock_item;
+
+	if (curr_lock == NULL) {
+		return false;
+	}
+
+	for (e = list_begin(&list_locks); e != list_end(&list_locks); e = list_next(e)) {
+		lock_item = list_entry(e, struct lock, elem);
+		if (lock_item->id == curr_lock->id) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -222,8 +263,29 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+	// if there is not someone waiting to get the lock and the lock has been previously assigned, remove it
+	if (list_empty(&lock->semaphore.waiters) && lock_exists(lock)) {
+		list_remove(&lock->elem);
+	}
+
+	bool yield = false;
+	// if the holder received a donation, we need to bring it back to the original priority once it releases
+	if(lock->holder->priority_donated == true) {
+		// if original is lower than priority, must yield for scheduling
+		if (lock->holder->priority_original < lock->holder->priority) {
+			yield = true;
+		}
+
+		lock->holder->priority = lock->holder->priority_original; //restore
+		lock->holder->priority_donated = false;
+	}
+
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
+
+	if (yield) {
+		thread_yield();
+	}
 }
 
 /* Returns true if the current thread holds LOCK, false
