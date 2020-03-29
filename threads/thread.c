@@ -218,7 +218,7 @@ thread_create (const char *name, int priority,
 	thread_unblock (t);
 
 	// if the priority of the new thread is higher, need to yield
-	if (thread_current()->priority < t->priority) {
+	if (thread_current()->priority < priority) {
 		//printf("%d - %d\n", thread_current()->priority, t->priority);
 		thread_yield();
 	}
@@ -321,8 +321,8 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread) {
-		list_push_back(&ready_list, &curr->elem);
-		//list_insert_ordered(&ready_list, &curr->elem, comparator_greater_priority, NULL);
+		//list_push_back(&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, comparator_greater_priority, NULL);
 	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
@@ -340,7 +340,7 @@ thread_set_priority (int new_priority) {
 	}
 
 	current_t->priority = new_priority;
-	current_t->priority_original = new_priority;
+	//current_t->priority_original = new_priority;
 
 	int max_priority = list_entry(list_max(&ready_list, comparator_less_priority, NULL), struct thread, elem)->priority;
 
