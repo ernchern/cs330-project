@@ -1,0 +1,23 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.11.0-0-g63451fca13-prebuilt.qemu-project.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+0FF915A0+0FEF15A0 C980
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..Kernel command line: -q run alarm-zero
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x100000 (Usable: 704 kB)
+	ext_mem: 0x100000 ~ 0x100000000 (Usable: 261,376 kB)
+Calibrating timer...  107,929,600 loops/s.
+Boot complete.
+Executing 'alarm-zero':
+(alarm-zero) begin
+(alarm-zero) PASS
+(alarm-zero) end
+Execution of 'alarm-zero' complete.
+Timer: 27 ticks
+Thread: 0 idle ticks, 27 kernel ticks, 0 user ticks
+Console: 398 characters output
+Keyboard: 0 keys pressed
+Powering off...

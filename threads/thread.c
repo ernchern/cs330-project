@@ -114,7 +114,6 @@ thread_init (void) {
 	list_init (&destruction_req);
 
 	list_init (&sleeping_list); // inits sleeping list
-	list_init (&list_locks); // init list of locks
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -260,6 +259,7 @@ thread_unblock (struct thread *t) {
 	list_insert_ordered(&ready_list, &t->elem, comparator_greater_priority, NULL);
 
 	t->status = THREAD_READY;
+
 	intr_set_level (old_level);
 }
 
@@ -305,7 +305,21 @@ thread_exit (void) {
 
 	/* Just set our status to dying and schedule another process.
 	   We will be destroyed during the call to schedule_tail(). */
+
+	struct thread *t = thread_current();
+	struct list_elem *e;
+	struct lock *lock;
+
+	// need to release all locks
+	if (!list_empty(&t->locks)) {
+		for (e = list_begin (&t->locks); e != list_end (&t->locks); e = list_next (e)) {
+	    	lock = list_entry(e, struct lock, elem);
+	    	lock_release(lock);
+		}
+	}
+
 	intr_disable ();
+	//list_remove(&t->elem);
 	do_schedule (THREAD_DYING);
 	NOT_REACHED ();
 }
@@ -334,17 +348,13 @@ thread_set_priority (int new_priority) {
 	struct thread *current_t = thread_current();
 
 	// if priority has been donated, do not set it and return cause it is not supposed to yield
-	if (current_t->priority_donated) {
-		current_t->priority_original = new_priority;
-		return;
+	if (!current_t->priority_donated) {
+		current_t->priority = new_priority;
 	}
-
-	current_t->priority = new_priority;
-	//current_t->priority_original = new_priority;
+	current_t->priority_original = new_priority;
 
 	int max_priority = list_entry(list_max(&ready_list, comparator_less_priority, NULL), struct thread, elem)->priority;
 
-	// need to sort as it takes the front item when selecting thread
 	list_sort(&ready_list, comparator_greater_priority, NULL);
 
 	if (current_t->priority < max_priority) {
@@ -451,6 +461,8 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->n_tick_awake = 0;
 	t->priority_donated = false;
 	t->priority_original = priority;
+	t->waiting_lock = NULL;
+	list_init(&t->locks);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -463,7 +475,6 @@ next_thread_to_run (void) {
 	if (list_empty (&ready_list))
 		return idle_thread;
 	else {
-		donate_priority(); // see if needs to donate, so we can pick the one with highest priority
 		return list_entry (list_pop_front (&ready_list), struct thread, elem);
 	}
 
@@ -680,26 +691,37 @@ bool comparator_greater_priority(struct list_elem *e1, struct list_elem *e2, voi
 	return t1->priority > t2->priority;
 }
 
-void donate_priority() {
-	struct list_elem *e;
-	struct lock *curr_lock;
-	struct list *lock_waiters;
-	struct thread *max_t;
-
-	for (e = list_begin(&list_locks); e != list_end(&list_locks); e = list_next(e)) {
-		curr_lock = list_entry(e, struct lock, elem);
-		lock_waiters = &curr_lock->semaphore.waiters; // the semaphore is not a pointer, so use ., get address for pointer
-
-		if (!list_empty(&lock_waiters)) { // if list is empty, nothing we can do
-			max_t = list_entry(list_max(lock_waiters, comparator_less_priority, NULL), struct thread, elem);
-
-			// if there is thread waiting if higher priority, donate it
-			if (max_t != NULL && max_t->priority > curr_lock->holder->priority) {
-				curr_lock->holder->priority = max_t->priority;
-				curr_lock->holder->priority_donated = true;
-				list_sort(&ready_list, comparator_greater_priority, NULL);
-			}
-		}
+void needs_to_yield() {
+	struct thread *curr_t = thread_current();
+	struct thread *next_t = NULL;
+	if (!list_empty(&ready_list)) {
+		next_t = list_entry(list_front(&ready_list), struct thread, elem);
 	}
-
+	if (next_t != NULL && next_t->priority > curr_t->priority) {
+		thread_yield();
+	}
 }
+
+// void donate_priority() {
+// 	struct list_elem *e;
+// 	struct lock *curr_lock;
+// 	struct list *lock_waiters;
+// 	struct thread *max_t;
+
+// 	for (e = list_begin(&list_locks); e != list_end(&list_locks); e = list_next(e)) {
+// 		curr_lock = list_entry(e, struct lock, elem);
+// 		lock_waiters = &curr_lock->semaphore.waiters; // the semaphore is not a pointer, so use ., get address for pointer
+
+// 		if (!list_empty(lock_waiters)) { // if list is empty, nothing we can do
+// 			max_t = list_entry(list_max(lock_waiters, comparator_less_priority, NULL), struct thread, elem);
+
+// 			// if there is thread waiting if higher priority, donate it
+// 			if (max_t != NULL && max_t->priority > curr_lock->holder->priority) {
+// 				curr_lock->holder->priority = max_t->priority;
+// 				curr_lock->holder->priority_donated = true;
+// 				list_sort(&ready_list, comparator_greater_priority, NULL);
+// 			}
+// 		}
+// 	}
+
+// }

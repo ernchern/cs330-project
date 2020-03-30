@@ -104,6 +104,9 @@ struct thread {
 
 	int priority_original; // initial priority, never changes on donation
 	bool priority_donated; //true if it has received an new donated priority
+
+	struct lock *waiting_lock; //lock that it is waiting
+	struct list locks; // list of locks that thread holds
 };
 
 /* If false (default), use round-robin scheduler.
@@ -146,7 +149,9 @@ void sleep_thread(struct thread *);
 bool comparator_less_priority(struct list_elem *, struct list_elem *, void *);
 bool comparator_greater_priority(struct list_elem *, struct list_elem *, void *);
 
-void donate_priority(void);
+void needs_to_yield(void);
+
+// extern void donate_priority(void);
 
 //void print_ready_list(void);
 
