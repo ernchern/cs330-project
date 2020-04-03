@@ -34,7 +34,6 @@
 
 #define MAX_DONATION 8
 
-
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -116,11 +115,11 @@ sema_up (struct semaphore *sema) {
 	struct thread *t = NULL;
 
 	if (!list_empty (&sema->waiters)) {
+		list_sort(&sema->waiters, comparator_greater_priority, NULL);
 		t = list_entry(list_pop_front(&sema->waiters), struct thread, elem);
 		thread_unblock(t);
 	}
 	sema->value++;
-	intr_set_level (old_level);
 
 	struct thread *curr_t = thread_current();
 
@@ -128,6 +127,8 @@ sema_up (struct semaphore *sema) {
 	if (t!= NULL && curr_t->priority < t->priority) {
 		thread_yield();
 	}
+	
+	intr_set_level (old_level);
 }
 
 static void sema_test_helper (void *sema_);
@@ -235,7 +236,7 @@ lock_acquire (struct lock *lock) {
 
 	// if this worked we the new holder is not waiting for it anymore
 	lock->holder->waiting_lock = NULL;
-	list_push_back(&lock->holder->locks, &lock->elem);
+	list_insert_ordered(&lock->holder->locks, &lock->elem, comparator_greater_priority, NULL);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -252,8 +253,10 @@ lock_try_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 
 	success = sema_try_down (&lock->semaphore);
-	if (success)
+	if (success) {
 		lock->holder = thread_current ();
+		list_push_back(&lock->holder->locks, &lock->elem);
+	}
 	return success;
 }
 
@@ -313,6 +316,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */
 	struct semaphore semaphore;         /* This semaphore. */
+	int priority;
 };
 
 /* Initializes condition variable COND.  A condition variable
@@ -355,10 +359,18 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
+	waiter.priority = thread_current()->priority;
+	list_insert_ordered(&cond->waiters, &waiter.elem, comparator_greater_sema, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
+}
+
+bool comparator_greater_sema(struct list_elem *l_elem, struct list_elem *r_elem, void *empty) {
+	struct semaphore_elem *l = list_entry(l_elem, struct semaphore_elem, elem);
+	struct semaphore_elem *r = list_entry(r_elem, struct semaphore_elem, elem);
+
+	return l->priority > r->priority;
 }
 
 /* If any threads are waiting on COND (protected by LOCK), then

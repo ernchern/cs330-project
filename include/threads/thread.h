@@ -107,6 +107,9 @@ struct thread {
 
 	struct lock *waiting_lock; //lock that it is waiting
 	struct list locks; // list of locks that thread holds
+
+	int nice;
+	int64_t recent_cpu;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -148,8 +151,16 @@ void sleep_thread(struct thread *);
 
 bool comparator_less_priority(struct list_elem *, struct list_elem *, void *);
 bool comparator_greater_priority(struct list_elem *, struct list_elem *, void *);
+//bool comparator_greater_equal_priority(struct list_elem *, struct list_elem *, void *);
 
 void needs_to_yield(void);
+
+void calculate_priority(void);
+void calculate_load_avg(void);
+void calculate_recent_cpu(void);
+int set_priority_range(int);
+
+void print_ready_list(void);
 
 // extern void donate_priority(void);
 
