@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h";
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -98,6 +99,8 @@ struct thread {
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	int ret;
+	struct semaphore process_wait_sem;
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -118,6 +121,8 @@ struct thread {
 
 	int nice;
 	int64_t recent_cpu;
+
+	
 };
 
 /* If false (default), use round-robin scheduler.
@@ -162,6 +167,8 @@ bool comparator_greater_priority(struct list_elem *, struct list_elem *, void *)
 //bool comparator_greater_equal_priority(struct list_elem *, struct list_elem *, void *);
 
 void needs_to_yield(void);
+
+struct thread *get_thread(tid_t);
 
 void calculate_priority(void);
 void calculate_load_avg(void);

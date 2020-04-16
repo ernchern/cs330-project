@@ -15,6 +15,7 @@
 #include "userprog/process.h"
 #endif
 #include "devices/timer.h"
+#include "threads/synch.h";
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -251,6 +252,11 @@ thread_create (const char *name, int priority,
 		thread_yield();
 	}
 
+#ifdef USERPROG
+	t->ret = RET_NORMAL;
+	sema_init(&t->process_wait_sem, 0);
+#endif
+
 	return tid;
 }
 
@@ -329,7 +335,8 @@ thread_exit (void) {
 	ASSERT (!intr_context ());
 
 #ifdef USERPROG
-	process_cleanup ();
+	// process_cleanup ();
+	process_exit ();
 #endif
 
 	/* Just set our status to dying and schedule another process.
@@ -822,6 +829,26 @@ void needs_to_yield() {
 	if (next_t != NULL && next_t->priority > curr_t->priority) {
 		thread_yield();
 	}
+}
+
+struct thread *get_thread(tid_t tid) {
+	struct list_elem *e;
+	struct thread *t;
+
+	for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
+		t = list_entry(e, struct thread, elem);
+		if (t->tid == tid) {
+			return t;
+		}
+	}
+
+	for (e = list_begin(&sleeping_list); e != list_end(&sleeping_list); e = list_next(e)) {
+		t = list_entry(e, struct thread, elem);
+		if (t->tid == tid) {
+			return t;
+		}
+	}
+	return NULL;
 }
 
 // void donate_priority() {

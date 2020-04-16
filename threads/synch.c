@@ -124,7 +124,7 @@ sema_up (struct semaphore *sema) {
 	struct thread *curr_t = thread_current();
 
 	// changed: if the one awake has higher priority, yield
-	if (t!= NULL && curr_t->priority < t->priority) {
+	if (t!= NULL && curr_t->priority < t->priority && !intr_context()) {
 		thread_yield();
 	}
 	
@@ -203,10 +203,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	// if the lock is not yet in the list, add it
-	// if (!lock_exists(lock)) {
-	// 	list_push_back(&list_locks, &lock->elem);
-	// }
+	enum intr_level old_level;
+  
+  	old_level = intr_disable ();
 
 	// priority donation
 	struct thread *holder = lock->holder;
@@ -217,27 +216,37 @@ lock_acquire (struct lock *lock) {
 
 	int cont = 0;
 
-	// while there is a lower priority holder
-	while(holder != NULL && holder->priority < curr_t->priority && cont < MAX_DONATION) {
-		holder->priority = curr_t->priority;
-		holder->priority_donated = true;
+	// while there is a lower priority holder, this does not happen with mlfqs
+	if (!thread_mlfqs) {
+		while(holder != NULL && holder->priority < curr_t->priority && cont < MAX_DONATION) {
+			holder->priority = curr_t->priority;
+			holder->priority_donated = true;
 
-		curr_lock = holder->waiting_lock;
-		if (curr_lock == NULL) {
-			break;
+			curr_lock = holder->waiting_lock;
+			if (curr_lock == NULL) {
+				break;
+			}
+			holder = curr_lock->holder;
+			cont++;
 		}
-		holder = curr_lock->holder;
-		cont++;
 	}
 
-
 	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
+	lock->holder = thread_current();
 
 	// if this worked we the new holder is not waiting for it anymore
-	lock->holder->waiting_lock = NULL;
-	list_insert_ordered(&lock->holder->locks, &lock->elem, comparator_greater_priority, NULL);
+	if (!thread_mlfqs) {
+		lock->holder->waiting_lock = NULL;
+		list_insert_ordered(&lock->holder->locks, &lock->elem, comparator_greater_priority, NULL);
+	} else {
+		list_push_back(&lock->holder->locks, &lock->elem);
+	}
+	
+
+
+	intr_set_level(old_level);
 }
+
 
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
@@ -271,33 +280,49 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+	enum intr_level old_level;
+  	old_level = intr_disable ();
+
 	struct thread *t = lock->holder;
 	lock->holder = NULL; // releases it
-	sema_up (&lock->semaphore);
+	if (!thread_mlfqs) {
+		sema_up (&lock->semaphore);
+	}
 	list_remove(&lock->elem); //remove from holder->locks
 
-	struct list_elem *e;
-	int max_priority = -1;
-	struct thread *max_t;
-	struct lock *tmplock;
-
-	if (list_empty(&t->locks)) { //if it does not hold any other locks, recover priority
-		t->priority = t->priority_original;
-		t->priority_donated = false;
-	} else { //if it still holds other locks, it should get the maximum so it does not lock the lock
-		for (e = list_begin(&t->locks); e != list_end(&t->locks); e = list_next(e)) {
-			tmplock = list_entry(e, struct lock, elem);
-			if (!list_empty(&tmplock->semaphore.waiters)) {
-				max_t = list_entry(list_max(&tmplock->semaphore.waiters, comparator_less_priority, NULL), struct thread, elem);
-				if (max_t->priority > max_priority) {
-					max_priority = max_t->priority;
+	// only if not mlfqs
+	if (!thread_mlfqs) {
+		struct list_elem *e;
+		int max_priority = -1;
+		struct thread *max_t;
+		struct lock *tmplock;
+		if (list_empty(&t->locks)) { //if it does not hold any other locks, recover priority
+			t->priority = t->priority_original;
+			t->priority_donated = false;
+		} else { //if it still holds other locks, it should get the maximum so it does not lock the lock
+			for (e = list_begin(&t->locks); e != list_end(&t->locks); e = list_next(e)) {
+				tmplock = list_entry(e, struct lock, elem);
+				if (!list_empty(&tmplock->semaphore.waiters)) {
+					max_t = list_entry(list_max(&tmplock->semaphore.waiters, comparator_less_priority, NULL), struct thread, elem);
+					if (max_t->priority > max_priority) {
+						max_priority = max_t->priority;
+					}
 				}
 			}
+			t->priority = (max_priority < 0)? t->priority_original : max_priority;
 		}
-		t->priority = (max_priority < 0)? t->priority_original : max_priority;
+
+		needs_to_yield();
+	} else {
+		thread_yield();
 	}
 
-	needs_to_yield();
+	if (thread_mlfqs) {
+		sema_up (&lock->semaphore);
+	}
+	
+	intr_set_level(old_level);
+
 
 }
 
