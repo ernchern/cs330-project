@@ -29,6 +29,9 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define RET_ERROR -1
+#define RET_NORMAL 0
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -95,16 +98,20 @@ struct thread {
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+	struct list child_list; 
+	struct thread *parent;            
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
 	int ret;
 	struct semaphore process_wait_sem;
+	struct file *running_file;
+	struct list open_files;
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
-	struct frame_table frame_table;
+	struct supplemental_page_table spt;
 #endif
 
 	/* Owned by thread.c. */
@@ -123,6 +130,11 @@ struct thread {
 	int64_t recent_cpu;
 
 	
+};
+
+struct child_process {
+  		struct list_elem child_elem;  
+  		struct thread *thread;
 };
 
 /* If false (default), use round-robin scheduler.
