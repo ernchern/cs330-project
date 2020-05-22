@@ -61,8 +61,9 @@ consume_some_resources (void)
 			  break;
 	  }
 #else
-		if (open (test_name) == -1)
-		  break;
+		if (open (test_name) == -1) {
+			break;
+		}
 #endif
   }
 }

@@ -2,10 +2,26 @@
 #define USERPROG_SYSCALL_H
 
 #include <stdbool.h>
+#include <stdio.h>
+#include "threads/interrupt.h"
+#include "threads/thread.h"
+#include "threads/loader.h"
+#include "userprog/gdt.h"
+#include "threads/flags.h"
+#include "threads/vaddr.h"
+#include <stdbool.h>
+#include "threads/synch.h"
+
 
 void syscall_init (void);
 
 typedef int pid_t;
+
+struct sys_file {
+	int fd;
+	struct file *file;
+	struct list_elem t_e;
+};
 
 void halt(void);
 void exit(int status);
@@ -21,5 +37,6 @@ int write (int fd, const void *buffer, unsigned size);
 void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
+struct sys_file *get_sys_file(int fd);
 
 #endif /* userprog/syscall.h */

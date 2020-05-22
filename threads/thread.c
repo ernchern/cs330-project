@@ -15,7 +15,8 @@
 #include "userprog/process.h"
 #endif
 #include "devices/timer.h"
-#include "threads/synch.h";
+#include "threads/synch.h"
+#include "userprog/syscall.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -221,19 +222,29 @@ thread_create (const char *name, int priority,
 
 	/* Allocate thread. */
 	t = palloc_get_page (PAL_ZERO);
-	if (t == NULL)
+	if (t == NULL) {
+		palloc_free_page(t);
 		return TID_ERROR;
+	}
 
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
 
+#ifdef USERPROG
 	struct thread *curr = thread_current();
 	struct child_process *child = palloc_get_page (PAL_ZERO);
+	if (child == NULL) {
+		palloc_free_page(child);
+		return TID_ERROR;
+	}
 	child->thread = t;
+	child->pid = tid;
+	child->ret = NULL;
 	list_push_back(&curr->child_list, &child->child_elem);
 	t->parent = curr;
-
+	child->exited = false;
+#endif
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
@@ -261,6 +272,7 @@ thread_create (const char *name, int priority,
 #ifdef USERPROG
 	t->ret = RET_NORMAL;
 	sema_init(&t->process_wait_sem, 0);
+	sema_init(&t->fork_sem, 0);
 #endif
 
 	return tid;
@@ -301,7 +313,12 @@ thread_unblock (struct thread *t) {
 
 	t->status = THREAD_READY;
 
+
 	intr_set_level (old_level);
+}
+
+struct thread *get_highest() {
+	return list_entry(list_begin(&ready_list), struct thread, elem);
 }
 
 /* Returns the name of the running thread. */
@@ -378,8 +395,6 @@ thread_yield (void) {
 	struct thread *curr = thread_current ();
 	if (curr != idle_thread) {
 		list_insert_ordered(&ready_list, &curr->elem, comparator_greater_priority, NULL);
-		// list_push_back(&ready_list, &curr->elem);
-		// list_sort(&ready_list, comparator_greater_priority, NULL);
 	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
@@ -592,10 +607,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->priority_original = priority;
 	t->waiting_lock = NULL;
 	list_init(&t->locks);
-	list_init(&t->child_list);
 
 #ifdef USERPROG
 	list_init(&t->open_files);
+	list_init(&t->child_list);
+	t->isUser = false;
 #endif
 
 	if (!thread_mlfqs) {
@@ -862,26 +878,20 @@ struct thread *get_thread(tid_t tid) {
 	return NULL;
 }
 
-// void donate_priority() {
-// 	struct list_elem *e;
-// 	struct lock *curr_lock;
-// 	struct list *lock_waiters;
-// 	struct thread *max_t;
+struct child_process *get_child_thread(struct thread* t, tid_t tid) {
+	struct list_elem *e;
+	struct child_process *child;
+	
+	if (!list_empty(&t->child_list)) {
+		for (e = list_begin(&t->child_list); e != list_end(&t->child_list); e = list_next(e)) {
+			child = list_entry(e, struct child_process, child_elem);
+			if (child->pid == tid) {
+				//list_remove(&child->child_elem);
+				return child;
+			}
+		}
+	}
+	
+	return NULL;
+}
 
-// 	for (e = list_begin(&list_locks); e != list_end(&list_locks); e = list_next(e)) {
-// 		curr_lock = list_entry(e, struct lock, elem);
-// 		lock_waiters = &curr_lock->semaphore.waiters; // the semaphore is not a pointer, so use ., get address for pointer
-
-// 		if (!list_empty(lock_waiters)) { // if list is empty, nothing we can do
-// 			max_t = list_entry(list_max(lock_waiters, comparator_less_priority, NULL), struct thread, elem);
-
-// 			// if there is thread waiting if higher priority, donate it
-// 			if (max_t != NULL && max_t->priority > curr_lock->holder->priority) {
-// 				curr_lock->holder->priority = max_t->priority;
-// 				curr_lock->holder->priority_donated = true;
-// 				list_sort(&ready_list, comparator_greater_priority, NULL);
-// 			}
-// 		}
-// 	}
-
-// }

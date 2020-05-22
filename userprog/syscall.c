@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include "threads/synch.h"
 #include "filesys/file.h"
+#include "filesys/filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -30,15 +31,16 @@ void syscall_handler (struct intr_frame *);
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
 
 static struct lock file_lock;
-static struct list file_list;
-static int last_fd = 1;
+//static struct list file_list;
+//static int last_fd = 1;
+//static struct intr_frame *f_;
 
-struct sys_file {
-	int fd;
-	struct file *file;
-	struct list_elem e;
-	struct list_elem t_e;
-};
+// struct sys_file {
+// 	int fd;
+// 	struct file *file;
+// 	struct list_elem e;
+// 	struct list_elem t_e;
+// };
 
 void
 syscall_init (void) {
@@ -52,13 +54,13 @@ syscall_init (void) {
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 
-	list_init(&file_list);
+	//list_init(&file_list);
 	lock_init(&file_lock);
 }
 
 /* The main system call interface */
 void
-syscall_handler (struct intr_frame *f UNUSED) {
+syscall_handler (struct intr_frame *f) {
 	// TODO: Your implementation goes here.
 	//printf ("system call!\n");
 
@@ -82,10 +84,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			halt();
 		break;
 		case SYS_EXIT:
-			//kill(f);
 			exit(f->R.rdi);
 		break;
 		case SYS_FORK:
+			thread_current()->fork_f = f;
 			ret = fork(f->R.rdi);
 		break;
 		case SYS_EXEC:
@@ -133,7 +135,6 @@ void halt () {
 
 void exit (int status) {
 	struct thread *t = thread_current();
-	// need to close all fds, TODO after close is done
 	t->ret = status;
 	thread_exit();
 	return -1;
@@ -141,14 +142,30 @@ void exit (int status) {
 }
 
 pid_t fork (const char *thread_name) {
-	printf("void\n");
-	return -1;
+	struct thread *t = thread_current();
+	pid_t ret = process_fork(thread_name, t->fork_f);
+	return ret;
 }
 
 
 int exec (const char *cmd_line) {
-	printf("exec\n");
-	return -1;
+	if (cmd_line == NULL || !is_user_vaddr(cmd_line) || pml4_get_page(thread_current()->pml4, cmd_line) == NULL) {
+		exit(-1);
+	}
+	char *ptr;
+	struct file *file;
+	int len = strlen(cmd_line)+1;
+	char *newcmd = malloc(len);
+	memcpy(newcmd, cmd_line, len);     
+	
+	char *new = strtok_r(cmd_line, " ", &ptr);   //i could not tokenize newcmd, why
+	file = filesys_open(new);
+	if (file == NULL) {
+		printf ("load: %s: open failed\n", cmd_line);
+		exit(-1);
+	}
+
+	return process_exec(newcmd);
 }
 
 int wait (pid_t pid) {
@@ -156,7 +173,7 @@ int wait (pid_t pid) {
 }
 
 bool create (const char *file, unsigned initial_size) {
-	if (!is_user_vaddr(file) || file == NULL) {
+	if (!is_user_vaddr(file) || file == NULL || pml4_get_page(thread_current()->pml4,file) == NULL) {
 		exit(-1);
 	}
 	return filesys_create(file, initial_size);
@@ -170,96 +187,179 @@ bool remove (const char *file) {
 }
 
 int open (const char *file) {
-	if (file == NULL || !is_user_vaddr(file)) {
+	if (file == NULL || !is_user_vaddr(file) || pml4_get_page(thread_current()->pml4,file) == NULL) {
 		exit(-1);
 	} 
 
-	struct file *f = filesys_open(file);
-	if (f == NULL) {
+	struct sys_file *new_sys_file = (struct sys_file *) malloc(sizeof(struct sys_file));
+	if (new_sys_file == NULL) {
 		return -1;
 	}
 
-	struct sys_file *new_sys_file = (struct sys_file *) malloc(sizeof(struct sys_file));
-	if (new_sys_file == NULL) { // could not crete a sys_file
-		file_close(f);
-		exit(-1);
+	struct file *f = filesys_open(file);
+	if (f == NULL) {
+		free(new_sys_file);
+		return -1;
 	}
 
+	struct thread *t = thread_current();
+
+	if (strcmp(file, t->name) == 0) {
+		file_deny_write(f);
+	}
+
+
 	new_sys_file->file = f;
-	last_fd++;
-	new_sys_file->fd = last_fd;
-	list_push_back(&file_list, &new_sys_file->e);
-	list_push_back(&thread_current()->open_files, &new_sys_file->t_e);
-	return last_fd;
+
+	int n_fds = list_size(&t->open_files);
+	new_sys_file->fd = 2 + n_fds;
+
+	list_push_back(&t->open_files, &new_sys_file->t_e);
+	return 2 + n_fds;
 }
 
 int filesize (int fd) {
-	printf("filesize\n");
-	return -1;
+	struct list_elem *e_;
+	struct sys_file *file_entry = get_sys_file(fd);
+	if (file_entry == NULL) {
+		return -1;
+	}
+	struct file *file = file_entry->file;
+	if (file == NULL) {
+		return -1;
+	}
+
+	return file_length(file);
+
 }
 
 int read (int fd, void *buffer, unsigned size) {
-	printf("read\n");
-	return -1;
+	int ret = -1;
+	if (fd != STDOUT_FILENO) {
+		lock_acquire(&file_lock); // get lock of file
+
+		if (!(is_user_vaddr(buffer) && is_user_vaddr(buffer + size))) { // if readinng something outside the allowed memory
+			lock_release(&file_lock);
+			exit(-1);
+		}
+
+		if (!(pml4_get_page(thread_current()->pml4,buffer) && pml4_get_page(thread_current()->pml4,(buffer + size)))) {
+			lock_release(&file_lock);
+			exit(-1);
+		}
+
+		if (fd == STDIN_FILENO) { // if reading from console
+			uint8_t read = input_getc();
+			ret = 0;
+			while(read != NULL) {
+				*(char *)(buffer + ret) = read;
+				ret++;
+				read = input_getc();
+			}
+			lock_release(&file_lock);
+			return ret;
+		} else { // neds to file file where to write
+			struct list_elem *e_;
+			struct sys_file *file_entry = get_sys_file(fd);
+			if (file_entry == NULL) {
+				lock_release(&file_lock);
+				return -1;
+			}
+			struct file *file = file_entry->file;
+			if (file == NULL) { // has not found a file
+				lock_release(&file_lock);
+				return -1;
+			} else { // read from found file
+				ret = file_read(file, buffer, size);
+				lock_release(&file_lock);
+				return ret;
+			}
+		}
+	}
+	return ret;
 }
 
 int write (int fd, const void *buffer, unsigned size) {
 	struct file *f;
 	int ret = -1;
+	if (fd != STDIN_FILENO) {
+		lock_acquire(&file_lock); // get lock of file
 
-	lock_acquire(&file_lock); // get lock of file
-
-	/*
-	if (fd == STDIN_FILENO) { // if wants to write in input, cannot do it
-		lock_release(&file_lock);
-		return ret;
-	}
-	*/
-
-	if (!(is_user_vaddr(buffer) && is_user_vaddr(buffer + size))) { // if readinng something outside the allowed memory
-		lock_release(&file_lock);
-		exit(-1);
-	}
-
-	if (fd == STDOUT_FILENO) { // if writing to console
-		lock_release(&file_lock);
-		putbuf(buffer, size);
-		return 0;
-		//return size;
-	} else { // neds to file file where to write
-		struct list_elem *e_;
-		struct sys_file *file_entry;
-		struct file *file = NULL;
-		for (e_ = list_begin(&file_list); e_ != list_end(&file_list); e_ = list_next(e_)) {
-			file_entry = list_entry(e_, struct sys_file, e);
-			if (file_entry->fd == fd) {
-				file = file_entry->file;
-			}
-		}
-		if (file == NULL) { // has not found a file
+		if (!(is_user_vaddr(buffer) && is_user_vaddr(buffer + size))) { // if readinng something outside the allowed memory
 			lock_release(&file_lock);
-			return ret;
-		} else { // write on found file
+			exit(-1);
+		}
+
+		if (!pml4_get_page(thread_current()->pml4,buffer) && !pml4_get_page(thread_current()->pml4,(buffer + size))) {
+			lock_release(&file_lock);
+			exit(-1);
+		}
+
+		if (fd == STDOUT_FILENO) { // if writing to console
+			putbuf(buffer, size);
+			lock_release(&file_lock);
+			return 0;
+		} else { // neds to file file where to write
+			struct list_elem *e_;
+			struct sys_file *file_entry = get_sys_file(fd);
+			if (file_entry == NULL) {
+				lock_release(&file_lock);
+				return -1;
+			}
+			struct file *file = file_entry->file;
+			if (file == NULL) { // has not found a file
+				lock_release(&file_lock);
+				return -1;
+			}
 			ret = file_write(file, buffer, size);
 			lock_release(&file_lock);
 			return ret;
 		}
 	}
-
 	return ret;
 }
 
 void seek (int fd, unsigned position) {
-	printf("seek\n");
-	return -1;
+	struct sys_file *file_entry = get_sys_file(fd);
+	if (file_entry == NULL) {
+		return -1;
+	}
+
+	file_seek(file_entry->file, position);
 }
 
 unsigned tell (int fd) {
-	printf("tell\n");
-	return 0;
+	struct sys_file *file_entry = get_sys_file(fd);
+	if (file_entry == NULL) {
+		return -1;
+	}
+
+	return file_tell(file_entry->file);
 }
 
 void close (int fd) {
-	printf("close\n");
-	return -1;
+	struct sys_file *file_entry = get_sys_file(fd);
+
+	if (file_entry == NULL) {
+		return;
+	}
+
+	file_close(file_entry->file);
+	//list_remove(&file_entry->e);
+	list_remove(&file_entry->t_e);
+	free(file_entry);
+}
+
+struct sys_file *get_sys_file(int fd) {
+	struct list_elem *e_;
+	struct thread *t = thread_current();
+	struct sys_file *file_entry;
+
+	for (e_ = list_begin(&t->open_files); e_ != list_end(&t->open_files); e_ = list_next(e_)) {
+		file_entry = list_entry(e_, struct sys_file, t_e);
+		if (file_entry->fd == fd) {
+			return file_entry;
+		}
+	}
+	return NULL;
 }

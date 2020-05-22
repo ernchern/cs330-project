@@ -97,9 +97,7 @@ struct thread {
 	int priority;                       /* Priority. */
 
 	/* Shared between thread.c and synch.c. */
-	struct list_elem elem;              /* List element. */
-	struct list child_list; 
-	struct thread *parent;            
+	struct list_elem elem;              /* List element. */          
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -108,6 +106,12 @@ struct thread {
 	struct semaphore process_wait_sem;
 	struct file *running_file;
 	struct list open_files;
+	struct list child_list; 
+	struct thread *parent; 
+	bool isUser; 
+	struct intr_frame *fork_f;
+	struct semaphore fork_sem;
+
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -133,8 +137,11 @@ struct thread {
 };
 
 struct child_process {
-  		struct list_elem child_elem;  
-  		struct thread *thread;
+		struct list_elem child_elem;  
+		struct thread *thread;
+		tid_t pid;
+		int ret;
+		bool exited;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -188,6 +195,13 @@ void calculate_recent_cpu(void);
 int set_priority_range(int);
 
 void print_ready_list(void);
+
+int get_ret_from_thread(tid_t);
+
+struct thread *get_highest(void);
+
+struct child_process *get_child_thread(struct thread*, tid_t);
+
 
 // extern void donate_priority(void);
 

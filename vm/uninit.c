@@ -51,6 +51,9 @@ uninit_initialize (struct page *page, void *kva) {
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 
+	// struct aux_vm *aux_vm = (struct aux_vm*) aux;
+	// page->frame = aux_vm->frame;
+
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);

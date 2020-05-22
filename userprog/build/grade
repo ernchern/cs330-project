@@ -1,0 +1,450 @@
+TOTAL TESTING SCORE: 89.5%
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+SUMMARY BY TEST SET
+
+Test Set                                      Pts Max  % Ttl  % Max
+--------------------------------------------- --- --- ------ ------
+tests/threads/Rubric.alarm                     18/ 18   2.0%/  2.0%
+tests/threads/Rubric.priority                  32/ 38   2.5%/  3.0%
+tests/userprog/Rubric.functionality           131/131  40.0%/ 40.0%
+tests/userprog/Rubric.robustness               74/ 74  30.0%/ 30.0%
+tests/userprog/no-vm/Rubric                     0/  1   0.0%/ 10.0%
+tests/filesys/base/Rubric                      30/ 30  15.0%/ 15.0%
+--------------------------------------------- --- --- ------ ------
+Total                                                  89.5%/100.0%
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+SUMMARY OF INDIVIDUAL TESTS
+
+Functionality and robustness of alarm clock (tests/threads/Rubric.alarm):
+	     4/ 4 tests/threads/alarm-single
+	     4/ 4 tests/threads/alarm-multiple
+	     4/ 4 tests/threads/alarm-simultaneous
+	     4/ 4 tests/threads/alarm-priority
+
+	     1/ 1 tests/threads/alarm-zero
+	     1/ 1 tests/threads/alarm-negative
+
+	- Section summary.
+	      6/  6 tests passed
+	     18/ 18 points subtotal
+
+Functionality of priority scheduler (tests/threads/Rubric.priority):
+	     3/ 3 tests/threads/priority-change
+	  ** 0/ 3 tests/threads/priority-preempt
+
+	     3/ 3 tests/threads/priority-fifo
+	     3/ 3 tests/threads/priority-sema
+	     3/ 3 tests/threads/priority-condvar
+
+	     3/ 3 tests/threads/priority-donate-one
+	     3/ 3 tests/threads/priority-donate-multiple
+	     3/ 3 tests/threads/priority-donate-multiple2
+	     3/ 3 tests/threads/priority-donate-nest
+	     5/ 5 tests/threads/priority-donate-chain
+	  ** 0/ 3 tests/threads/priority-donate-sema
+	     3/ 3 tests/threads/priority-donate-lower
+
+	- Section summary.
+	     10/ 12 tests passed
+	     32/ 38 points subtotal
+
+Functionality of system calls (tests/userprog/Rubric.functionality):
+	- Test argument passing on Pintos command line.
+	     3/ 3 tests/userprog/args-none
+	     3/ 3 tests/userprog/args-single
+	     3/ 3 tests/userprog/args-multiple
+	     3/ 3 tests/userprog/args-many
+	     3/ 3 tests/userprog/args-dbl-space
+
+	- Test "create" system call.
+	     3/ 3 tests/userprog/create-empty
+	     3/ 3 tests/userprog/create-long
+	     3/ 3 tests/userprog/create-normal
+	     3/ 3 tests/userprog/create-exists
+
+	- Test "open" system call.
+	     3/ 3 tests/userprog/open-missing
+	     3/ 3 tests/userprog/open-normal
+	     3/ 3 tests/userprog/open-twice
+
+	- Test "read" system call.
+	     3/ 3 tests/userprog/read-normal
+	     3/ 3 tests/userprog/read-zero
+
+	- Test "write" system call.
+	     3/ 3 tests/userprog/write-normal
+	     3/ 3 tests/userprog/write-zero
+
+	- Test "close" system call.
+	     3/ 3 tests/userprog/close-normal
+
+	- Test "fork" system call.
+	     3/ 3 tests/userprog/fork-once
+	     3/ 3 tests/userprog/fork-multiple
+	     3/ 3 tests/userprog/fork-close
+	     8/ 8 tests/userprog/fork-read
+
+	- Test "exec" system call.
+	     3/ 3 tests/userprog/exec-once
+	     3/ 3 tests/userprog/exec-arg
+	    10/10 tests/userprog/exec-read
+
+	- Test "wait" system call.
+	     5/ 5 tests/userprog/wait-simple
+	     5/ 5 tests/userprog/wait-twice
+
+	- Test "exit" system call.
+	     5/ 5 tests/userprog/exit
+
+	- Test "halt" system call.
+	     3/ 3 tests/userprog/halt
+
+	- Test recursive execution of user programs.
+	     5/ 5 tests/userprog/fork-recursive
+	    15/15 tests/userprog/multi-recurse
+
+	- Test read-only executable feature.
+	     3/ 3 tests/userprog/rox-simple
+	     3/ 3 tests/userprog/rox-child
+	     3/ 3 tests/userprog/rox-multichild
+
+	- Section summary.
+	     33/ 33 tests passed
+	    131/131 points subtotal
+
+Robustness of system calls (tests/userprog/Rubric.robustness):
+	- Test robustness of file descriptor handling.
+	     2/ 2 tests/userprog/close-bad-fd
+	     2/ 2 tests/userprog/close-twice
+	     2/ 2 tests/userprog/read-bad-fd
+	     2/ 2 tests/userprog/read-stdout
+	     2/ 2 tests/userprog/write-bad-fd
+	     2/ 2 tests/userprog/write-stdin
+	     2/ 2 tests/userprog/multi-child-fd
+
+	- Test robustness of pointer handling.
+	     3/ 3 tests/userprog/create-bad-ptr
+	     3/ 3 tests/userprog/exec-bad-ptr
+	     3/ 3 tests/userprog/open-bad-ptr
+	     3/ 3 tests/userprog/read-bad-ptr
+	     3/ 3 tests/userprog/write-bad-ptr
+
+	- Test robustness of buffer copying across page boundaries.
+	     3/ 3 tests/userprog/create-bound
+	     3/ 3 tests/userprog/open-boundary
+	     3/ 3 tests/userprog/read-boundary
+	     3/ 3 tests/userprog/write-boundary
+	     3/ 3 tests/userprog/fork-boundary
+	     3/ 3 tests/userprog/exec-boundary
+
+	- Test handling of null pointer and empty strings.
+	     2/ 2 tests/userprog/create-null
+	     2/ 2 tests/userprog/open-null
+	     2/ 2 tests/userprog/open-empty
+
+	- Test robustness of "fork", "exec" and "wait" system calls.
+	     5/ 5 tests/userprog/exec-missing
+	     5/ 5 tests/userprog/wait-bad-pid
+	     5/ 5 tests/userprog/wait-killed
+
+	- Test robustness of exception handling.
+	     1/ 1 tests/userprog/bad-read
+	     1/ 1 tests/userprog/bad-write
+	     1/ 1 tests/userprog/bad-jump
+	     1/ 1 tests/userprog/bad-read2
+	     1/ 1 tests/userprog/bad-write2
+	     1/ 1 tests/userprog/bad-jump2
+
+	- Section summary.
+	     30/ 30 tests passed
+	     74/ 74 points subtotal
+
+Functionality of features that VM might break (tests/userprog/no-vm/Rubric):
+
+	  ** 0/ 1 tests/userprog/no-vm/multi-oom
+
+	- Section summary.
+	      0/  1 tests passed
+	      0/  1 points subtotal
+
+Functionality of base file system (tests/filesys/base/Rubric):
+	- Test basic support for small files.
+	     1/ 1 tests/filesys/base/sm-create
+	     2/ 2 tests/filesys/base/sm-full
+	     2/ 2 tests/filesys/base/sm-random
+	     2/ 2 tests/filesys/base/sm-seq-block
+	     3/ 3 tests/filesys/base/sm-seq-random
+
+	- Test basic support for large files.
+	     1/ 1 tests/filesys/base/lg-create
+	     2/ 2 tests/filesys/base/lg-full
+	     2/ 2 tests/filesys/base/lg-random
+	     2/ 2 tests/filesys/base/lg-seq-block
+	     3/ 3 tests/filesys/base/lg-seq-random
+
+	- Test synchronized multiprogram access to files.
+	     4/ 4 tests/filesys/base/syn-read
+	     4/ 4 tests/filesys/base/syn-write
+	     2/ 2 tests/filesys/base/syn-remove
+
+	- Section summary.
+	     13/ 13 tests passed
+	     30/ 30 points subtotal
+
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+DETAILS OF tests/threads/priority-preempt FAILURE:
+
+Kernel panic in run: PANIC at ../../lib/kernel/list.c:243 in list_remove(): assertion `is_interior (elem)' failed.
+Call stack: 0x8004218b85 0x80042193db 0x8004219440 0x800420acd7 0x800421c95d 0x80042073e1 0x8004207f74
+Translation of call stack:
+0x0000008004218b85: debug_panic (lib/kernel/debug.c:32)
+0x00000080042193db: list_remove (lib/kernel/list.c:244)
+0x0000008004219440: list_pop_front (lib/kernel/list.c:255)
+0x000000800420acd7: sema_up (threads/synch.c:119)
+0x000000800421c95d: process_exit (userprog/process.c:320)
+0x00000080042073e1: thread_exit (threads/thread.c:368)
+0x0000008004207f74: init_thread (threads/thread.c:595)
+
+OUTPUT FROM tests/threads/priority-preempt:
+
+c[?7l[2J[0mSeaBIOS (version rel-1.11.0-0-g63451fca13-prebuilt.qemu-project.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+013915A0+012F15A0 C980
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk...
+Kernel command line: -q -threads-tests -f run priority-preempt
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  78,540,800 loops/s.
+hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+Formatting file system...done.
+Boot complete.
+Executing 'priority-preempt':
+(priority-preempt) begin
+(priority-preempt) Thread high-priority iteration 0
+(priority-preempt) Thread high-priority iteration 1
+(priority-preempt) Thread high-priority iteration 2
+(priority-preempt) Thread high-priority iteration 3
+(priority-preempt) Thread high-priority iteration 4
+(priority-preempt) Thread high-priority done!
+Kernel PANIC at ../../lib/kernel/list.c:243 in list_remove(): assertion `is_interior (elem)' failed.
+Call stack: 0x8004218b85 0x80042193db 0x8004219440 0x800420acd7 0x800421c95d 0x80042073e1 0x8004207f74.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 57 ticks
+Thread: 31 idle ticks, 26 kernel ticks, 0 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 9 reads, 18 writes
+Console: 1302 characters output
+Key
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+DETAILS OF tests/threads/priority-donate-sema FAILURE:
+
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (priority-donate-sema) begin
+  (priority-donate-sema) Thread L acquired lock.
+  (priority-donate-sema) Thread L downed semaphore.
+  (priority-donate-sema) Thread H acquired lock.
+  (priority-donate-sema) Thread H finished.
+  (priority-donate-sema) Thread M finished.
+  (priority-donate-sema) Thread L finished.
+  (priority-donate-sema) Main thread finished.
+  (priority-donate-sema) end
+Differences in `diff -u' format:
+  (priority-donate-sema) begin
+  (priority-donate-sema) Thread L acquired lock.
+- (priority-donate-sema) Thread L downed semaphore.
+- (priority-donate-sema) Thread H acquired lock.
+- (priority-donate-sema) Thread H finished.
+  (priority-donate-sema) Thread M finished.
+- (priority-donate-sema) Thread L finished.
+  (priority-donate-sema) Main thread finished.
+  (priority-donate-sema) end
+
+OUTPUT FROM tests/threads/priority-donate-sema:
+
+c[?7l[2J[0mSeaBIOS (version rel-1.11.0-0-g63451fca13-prebuilt.qemu-project.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+013915A0+012F15A0 C980
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..Kernel command line: -q -threads-tests -f run priority-donate-sema
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  104,755,200 loops/s.
+hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+Formatting file system...done.
+Boot complete.
+Executing 'priority-donate-sema':
+(priority-donate-sema) begin
+(priority-donate-sema) Thread L acquired lock.
+(priority-donate-sema) Thread M finished.
+(priority-donate-sema) Main thread finished.
+(priority-donate-sema) end
+Execution of 'priority-donate-sema' complete.
+Timer: 57 ticks
+Thread: 31 idle ticks, 26 kernel ticks, 0 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 9 reads, 18 writes
+Console: 857 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+DETAILS OF tests/userprog/no-vm/multi-oom FAILURE:
+
+run: crashed child should return -1.: FAILED
+
+OUTPUT FROM tests/userprog/no-vm/multi-oom:
+
+c[?7l[2J[0mSeaBIOS (version rel-1.11.0-0-g63451fca13-prebuilt.qemu-project.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 C980 PCI2.10 PnP PMM+013915A0+012F15A0 C980
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..Kernel command line: -q -f put multi-oom run multi-oom
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  104,755,200 loops/s.
+hd0:0: detected 321 sector (160 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 105 sector (52 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'multi-oom' into the file system...
+Executing 'multi-oom':
+(multi-oom) begin
+child_6_X: exit(-1)
+child_7_X: exit(-1)
+child_8_X: exit(-1)
+child_9_X: exit(-1)
+child_10_X: exit(-1)
+child_11_X: exit(-1)
+child_12_X: exit(-1)
+child_13_X: exit(-1)
+child_14_X: exit(-1)
+child_15_X: exit(-1)
+child_16_X: exit(-1)
+child_17_X: exit(-1)
+child_18_X: exit(-1)
+child_19_X: exit(-1)
+child_20_X: exit(-1)
+child_21_X: exit(-1)
+child_22_X: exit(-1)
+child_23_X: exit(-1)
+child_24_X: exit(-1)
+child_25_X: exit(-1)
+child_26_X: exit(-1)
+child_27_X: exit(-1)
+child_28_X: exit(-1)
+child_29_X: exit(-1)
+child_30_X: exit(-1)
+child_31_X: exit(-1)
+child_32_X: exit(-1)
+child_33_X: exit(-1)
+child_34_X: exit(-1)
+child_35_X: exit(-1)
+child_36_X: exit(-1)
+child_37_X: exit(-1)
+child_38_X: exit(-1)
+child_39_X: exit(-1)
+child_40_X: exit(-1)
+child_41_X: exit(-1)
+child_42_X: exit(-1)
+child_43_X: exit(-1)
+child_44_X: exit(-1)
+child_45_X: exit(0)
+(multi-oom) crashed child should return -1.: FAILED
+child_44_O: exit(1)
+child_41_O: exit(1)
+child_38_O: exit(1)
+child_34_O: exit(1)
+child_32_O: exit(1)
+child_30_O: exit(1)
+child_27_O: exit(1)
+child_25_O: exit(1)
+child_22_O: exit(1)
+child_20_O: exit(1)
+child_18_O: exit(1)
+child_16_O: exit(1)
+child_42_O: exit(1)
+child_35_O: exit(1)
+child_43_O: exit(1)
+child_40_O: exit(1)
+child_11_O: exit(1)
+(multi-oom) Should return > 0.: FAILED
+child_26_O: exit(1)
+child_9_O: exit(1)
+(multi-oom) Should return > 0.: FAILED
+child_24_O: exit(1)
+child_7_O: exit(1)
+child_15_O: exit(1)
+child_23_O: exit(1)
+(multi-oom) Should return > 0.: FAILED
+child_28_O: exit(1)
+child_5_O: exit(1)
+child_39_O: exit(1)
+child_12_O: exit(1)
+child_13_O: exit(1)
+child_14_O: exit(1)
+child_36_O: exit(1)
+child_10_O: exit(1)
+child_37_O: exit(1)
+child_31_O: exit(1)
+child_29_O: exit(1)
+child_8_O: exit(1)
+child_6_O: exit(1)
+child_21_O: exit(1)
+child_19_O: exit(1)
+child_17_O: exit(1)
+(multi-oom) Should return > 0.: FAILED
+child_4_O: exit(1)
+child_33_O: exit(1)
+(multi-oom) Should return > 0.: FAILED
+child_3_O: exit(1)
+child_2_O: exit(1)
+child_1_O: exit(1)
+child_0_O: exit(1)
+(multi-oom) Spawned at least 10 children.
+(multi-oom) Spawned at least 10 children.: FAILED
+multi-oom: exit(1)
+Execution of 'multi-oom' complete.
+Timer: 12530 ticks
+Thread: 113 idle ticks, 64 kernel ticks, 12353 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 21258 reads, 238 writes
+hd1:0: 105 reads, 0 writes
+Console: 2899 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...
