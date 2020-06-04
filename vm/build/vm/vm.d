@@ -8,4 +8,5 @@ vm/vm.o: ../../vm/vm.c ../../include/threads/malloc.h \
  ../../include/filesys/off_t.h ../../include/threads/thread.h \
  ../../include/lib/kernel/list.h ../../include/threads/interrupt.h \
  ../../include/threads/synch.h ../../include/vm/inspect.h \
- ../../include/threads/vaddr.h ../../include/threads/loader.h
+ ../../include/threads/vaddr.h ../../include/threads/loader.h \
+ ../../include/userprog/process.h

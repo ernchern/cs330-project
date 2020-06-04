@@ -101,7 +101,6 @@ struct aux_vm {
 	uint32_t zero_bytes;
 	bool writable;
 	struct thread *owner;
-	struct frame *frame;
 };
 
 #include "threads/thread.h"

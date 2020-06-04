@@ -12,4 +12,7 @@ void process_exit (void);
 void process_activate (struct thread *next);
 int getretfromchild (struct thread *t, tid_t tid);
 
+
+bool lazy_load_segment_caller(struct page *, void *);
+
 #endif /* userprog/process.h */

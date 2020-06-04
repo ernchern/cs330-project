@@ -243,10 +243,10 @@ int read (int fd, void *buffer, unsigned size) {
 			exit(-1);
 		}
 
-		if (!(pml4_get_page(thread_current()->pml4,buffer) && pml4_get_page(thread_current()->pml4,(buffer + size)))) {
-			lock_release(&file_lock);
-			exit(-1);
-		}
+		// if (!(pml4_get_page(thread_current()->pml4, buffer) && pml4_get_page(thread_current()->pml4,(buffer + size)))) {
+		// 	lock_release(&file_lock);
+		// 	exit(-1);
+		// }
 
 		if (fd == STDIN_FILENO) { // if reading from console
 			uint8_t read = input_getc();

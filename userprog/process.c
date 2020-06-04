@@ -227,7 +227,7 @@ process_exec (void *f_name) {
 
 	/* We first kill the current context */
 	process_cleanup ();
-
+	
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
@@ -235,7 +235,7 @@ process_exec (void *f_name) {
 	//palloc_free_page (file_name);
 	if (!success)
 		return -1;
-
+		
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
@@ -533,8 +533,9 @@ load (const char *file_name, struct intr_frame *if_) {
 						zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 					}
 					if (!load_segment (file, file_page, (void *) mem_page,
-								read_bytes, zero_bytes, writable))
+								read_bytes, zero_bytes, writable)) {
 						goto done;
+					}
 				}
 				else
 					goto done;
@@ -543,9 +544,9 @@ load (const char *file_name, struct intr_frame *if_) {
 	}
 
 	/* Set up stack. */
-	if (!setup_stack (if_))
+	if (!setup_stack (if_)) {
 		goto done;
-
+	}
 	/* Start address. */
 	if_->rip = ehdr.e_entry;
 
@@ -596,7 +597,7 @@ load (const char *file_name, struct intr_frame *if_) {
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+	//file_close (file);
 	return success;
 }
 
@@ -754,16 +755,17 @@ lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
 	struct aux_vm *aux_vm = (struct aux_vm*) aux;
-	// memset(page->frame->kva, 0, PGSIZE);
-	// file_read(aux_vm->file, page->frame->kva, aux_vm->read_bytes);
 
-	int read = file_read(aux_vm->file, page->frame->kva, aux_vm->read_bytes);
+	struct file *f = aux_vm->file;
+
+	file_seek(f, aux_vm->ofs);
+
+	int read = file_read(f, page->frame->kva, aux_vm->read_bytes);
 	if (read != aux_vm->read_bytes) {
 		return false;
 	}
 
 	memset(page->frame->kva + aux_vm->read_bytes, 0, aux_vm->zero_bytes);
-	
 
 	page->spt = &thread_current()->spt;
 	return true;
@@ -803,12 +805,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		aux_vm->file = file;
 		aux_vm->ofs = ofs;
 		aux_vm->upage = upage;
-		aux_vm->read_bytes = read_bytes;
-		aux_vm->zero_bytes = zero_bytes;
+		aux_vm->read_bytes = page_read_bytes;
+		aux_vm->zero_bytes = page_zero_bytes;
 		aux_vm->writable = writable;
 		aux_vm->owner = thread_current();
 
 		void *aux = aux_vm;
+
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
 					writable, lazy_load_segment, aux))
 			return false;
@@ -821,8 +824,11 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
+
+		//added
+		ofs += PGSIZE;
 	}
-	file_seek(file, ofs);
+	//file_seek(file, ofs);
 	return true;
 }
 
@@ -839,6 +845,12 @@ setup_stack (struct intr_frame *if_) {
 
 	//bool claimed = vm_claim_page(stack_bottom);
 	success = vm_alloc_page(VM_STACK, stack_bottom, true);
+	struct aux_vm *aux_vm = (struct aux_vm*) malloc(sizeof(struct aux_vm));
+	aux_vm->writable = true;
+	aux_vm->upage = stack_bottom;
+	aux_vm->owner = thread_current();
+	spt_find_page(&thread_current()->spt, stack_bottom)->aux_vm = aux_vm;
+
 
 	// if (claimed) {
 	// 	struct page *page = spt_find_page(&thread_current()->spt, stack_bottom);
@@ -851,4 +863,11 @@ setup_stack (struct intr_frame *if_) {
 
 	return success;
 }
+
+bool lazy_load_segment_caller(struct page *page, void *aux) {
+	return lazy_load_segment(page, aux);
+
+}
+
+
 #endif /* VM */
