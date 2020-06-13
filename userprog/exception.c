@@ -129,6 +129,10 @@ page_fault (struct intr_frame *f) {
 	   that caused the fault (that's f->rip). */
 
 	fault_addr = (void *) rcr2();
+	//printf("%p\n", fault_addr);
+	// if (fault_addr == 0xababc0) {
+	// 	printf("%p\n", fault_addr);
+	// }
 
 	/* Turn interrupts back on (they were only off so that we could
 	   be assured of reading CR2 before it changed). */
@@ -140,16 +144,13 @@ page_fault (struct intr_frame *f) {
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
 
-	bool user_vaddr = !is_user_vaddr(fault_addr);
-	
-	if (user && user_vaddr) {   //for 'bad' tests
-		exit(-1);
-	}
-
 #ifdef VM
 	/* For project 3 and later. */
 	if (vm_try_handle_fault (f, fault_addr, user, write, not_present))
 		return;
+	else {
+		exit(-1);
+	}
 #endif
 
 	/* Count page faults. */

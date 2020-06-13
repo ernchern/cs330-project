@@ -31,12 +31,18 @@ test_main (void)
     for (i = 0 ; i < PAGE_COUNT ; i++) {
         if(!(i % 512))
             msg ("write sparsely over page %zu", i);
+        //msg("%zu", i);
         mem = (big_chunks+(i*PAGE_SIZE));
+        //if (i == 0) 
+          //msg("%p", mem);
         *mem = (char)i;
     }
 
     for (i = 0 ; i < PAGE_COUNT ; i++) {
+        //msg("%zu", i);
         mem = (big_chunks+(i*PAGE_SIZE));
+        //msg("%c", *mem);
+        //msg("%p", mem);
         if((char)i != *mem) {
 		    fail ("data is inconsistent");
         }

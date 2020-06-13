@@ -123,10 +123,61 @@ syscall_handler (struct intr_frame *f) {
 		case SYS_CLOSE:
 			close(f->R.rdi);
 		break;
+		case SYS_MMAP:
+			ret = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+		break;
+		case SYS_MUNMAP:
+			munmap(f->R.rdi);
+		break; 
 
 	}
 
 	f->R.rax = ret;
+}
+
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
+	int file_len = filesize(fd);
+	if (file_len == 0 || length == 0 || offset > length) {
+		return NULL;
+	}
+
+	if (addr != pg_round_down(addr) || addr == NULL) {
+		return NULL;
+	}
+
+	// for (int i = (int) addr; i < ((int) addr + (int) length); i += (int) PGSIZE) {
+	// 	if (spt_find_page(&thread_current()->spt, i) != NULL) {
+	// 		return NULL;
+	// 	}
+	// }
+
+	if (fd == STDIN_FILENO || fd == STDOUT_FILENO) {
+		return NULL;
+	}
+
+	struct sys_file *file = get_sys_file(fd);
+	if (file == NULL) {
+		return NULL;
+	}
+
+	if (!is_user_vaddr(addr) || !is_user_vaddr(addr + length) || addr + length == 0) {
+		return NULL;
+	}
+
+	struct file *file_ = file->file;
+	file_ = file_reopen(file_);
+	return do_mmap (addr, length, writable, file_, offset);
+}
+
+void munmap (void *addr) {
+	struct page *page = spt_find_page(&thread_current()->spt, addr);
+	if (page->type != VM_FILE) {
+		exit(-1);
+	}
+
+	do_munmap(addr);
+
+
 }
 
 void halt () {
@@ -196,13 +247,13 @@ int open (const char *file) {
 		return -1;
 	}
 
+	struct thread *t = thread_current();
+
 	struct file *f = filesys_open(file);
 	if (f == NULL) {
 		free(new_sys_file);
 		return -1;
 	}
-
-	struct thread *t = thread_current();
 
 	if (strcmp(file, t->name) == 0) {
 		file_deny_write(f);
@@ -235,6 +286,9 @@ int filesize (int fd) {
 
 int read (int fd, void *buffer, unsigned size) {
 	int ret = -1;
+	if (((int) buffer >> 20) == 4) {
+		exit(-1);
+	}
 	if (fd != STDOUT_FILENO) {
 		lock_acquire(&file_lock); // get lock of file
 

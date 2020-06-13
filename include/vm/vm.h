@@ -45,7 +45,9 @@ struct page {
 
 	/* Your implementation */
 	struct list_elem elem;
+	struct hash_elem hash_elem;
 	enum vm_type type;
+	int use_count;
 
 	struct supplemental_page_table *spt;
 	struct aux_vm *aux_vm;
@@ -89,6 +91,7 @@ struct page_operations {
  * All designs up to you for this. */
 struct supplemental_page_table {
 	struct list page_list;
+	struct hash page_hash;
 	enum vm_type type;
 	struct thread *t;
 };

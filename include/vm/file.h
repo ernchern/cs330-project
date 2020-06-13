@@ -7,6 +7,7 @@ struct page;
 enum vm_type;
 
 struct file_page {
+	// bool has_modified;
 };
 
 void vm_file_init (void);

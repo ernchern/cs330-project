@@ -793,6 +793,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
 
+	//printf("%p %d %d\n", upage, read_bytes, zero_bytes);
+
 	while (read_bytes > 0 || zero_bytes > 0) {
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
@@ -866,6 +868,26 @@ setup_stack (struct intr_frame *if_) {
 
 bool lazy_load_segment_caller(struct page *page, void *aux) {
 	return lazy_load_segment(page, aux);
+
+}
+
+bool
+lazy_load_segment_mmap (struct page *page, void *aux) {
+	struct aux_vm *aux_vm = (struct aux_vm*) aux;
+
+	struct file *f = file_reopen(aux_vm->file);
+
+	file_seek(f, aux_vm->ofs);
+
+	int read = file_read(f, page->frame->kva, aux_vm->read_bytes);
+	if (read != aux_vm->read_bytes) {
+		return false;
+	}
+
+	memset(page->frame->kva + aux_vm->read_bytes, 0, aux_vm->zero_bytes);
+
+	page->spt = &thread_current()->spt;
+	return true;
 
 }
 

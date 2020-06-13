@@ -14,5 +14,6 @@ int getretfromchild (struct thread *t, tid_t tid);
 
 
 bool lazy_load_segment_caller(struct page *, void *);
+bool lazy_load_segment_mmap(struct page *, void *);
 
 #endif /* userprog/process.h */
